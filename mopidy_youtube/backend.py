@@ -48,7 +48,7 @@ def safe_url(uri):
     ).strip()
 
 
-def get_info(video, stream=False)
+    def get_info(video, stream=False):
     if not stream:
         uri = '%s/%s.%s' % (
             video_uri_prefix, safe_url(video.title), video.videoid)
