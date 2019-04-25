@@ -48,24 +48,18 @@ def safe_url(uri):
     ).strip()
 
 
-def resolve_url(url, stream=False):
-    try:
-        video = pafy.new(url)
-        if not stream:
-            uri = '%s/%s.%s' % (
-                video_uri_prefix, safe_url(video.title), video.videoid)
-        else:
-            uri = video.getbestaudio()
-            if not uri:  # get video url
-                uri = video.getbest()
-            logger.debug('%s - %s %s %s' % (
-                video.title, uri.bitrate, uri.mediatype, uri.extension))
-            uri = uri.url
-        if not uri:
-            return
-    except Exception as e:
-        # Video is private or doesn't exist
-        logger.info(e.message)
+def get_info(video, stream=False)
+    if not stream:
+        uri = '%s/%s.%s' % (
+            video_uri_prefix, safe_url(video.title), video.videoid)
+    else:
+        uri = video.getbestaudio()
+        if not uri:  # get video url
+            uri = video.getbest()
+        logger.debug('%s - %s %s %s' % (
+            video.title, uri.bitrate, uri.mediatype, uri.extension))
+        uri = uri.url
+    if not uri:
         return
 
     images = []
@@ -85,6 +79,16 @@ def resolve_url(url, stream=False):
         uri=uri
     )
     return track
+
+def resolve_url(url, stream=False):
+    try:
+        video = pafy.new(url)
+    except Exception as e:
+        # Video is private or doesn't exist
+        logger.info(e.message)
+        return
+
+    return get_info(video, stream)
 
 
 def search_youtube(q):
@@ -109,29 +113,10 @@ def search_youtube(q):
 def resolve_playlist(url):
     resolve_pool = ThreadPool(processes=16)
     logger.info("Resolving YouTube-Playlist '%s'", url)
-    playlist = []
 
-    page = 'first'
-    while page:
-        params = {
-            'playlistId': url,
-            'maxResults': 50,
-            'key': yt_key,
-            'part': 'contentDetails'
-        }
-        if page and page != "first":
-            logger.debug("Get YouTube-Playlist '%s' page %s", url, page)
-            params['pageToken'] = page
+    playlist = pafy.get_playlist(url)
 
-        result = session.get(yt_api_endpoint + 'playlistItems', params=params)
-        data = result.json()
-        page = data.get('nextPageToken')
-
-        for item in data["items"]:
-            video_id = item['contentDetails']['videoId']
-            playlist.append(video_id)
-
-    playlist = resolve_pool.map(resolve_url, playlist)
+    playlist = resolve_pool.map(get_info, playlist["items"])
     resolve_pool.close()
     return [item for item in playlist if item]
 
