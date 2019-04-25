@@ -116,7 +116,7 @@ def resolve_playlist(url):
 
     playlist = pafy.get_playlist(url)
 
-    playlist = resolve_pool.map(get_info, playlist["items"])
+    playlist = resolve_pool.map(get_info, map(lambda x:x['pafy'], playlist["items"]))
     resolve_pool.close()
     return [item for item in playlist if item]
 
